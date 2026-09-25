@@ -1,0 +1,100 @@
+<div class="dashboard-container">
+  <div class="dashboard-content">
+    
+    <!-- Top Bar -->
+    <div class="dashboard-header">
+      <div>
+        <h1 class="header-title">Client Network Dashboard</h1>
+        <p class="header-subtitle">Live status monitoring and device handles</p>
+      </div>
+      <button mat-raised-button color="primary" (click)="addClient()">
+        + Add Client
+      </button>
+    </div>
+
+    <!-- Search Controls -->
+    <div class="filter-card">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Filter Nickname, IP, or OS</mat-label>
+        <input matInput (keyup)="applyFilter($event)" placeholder="e.g. Salty, 192.168" #input>
+      </mat-form-field>
+    </div>
+
+    <!-- Responsive Table Card -->
+    <div class="table-card">
+      <div class="table-scroll-container">
+        <table mat-table [dataSource]="dataSource" matSort class="custom-table">
+
+          <!-- Action Button Column -->
+          <ng-container matColumnDef="action">
+            <th mat-header-cell *matHeaderCellDef class="action-cell"></th>
+            <td mat-cell *matCellDef="let element" class="action-cell">
+              <div class="icon-square">
+                <mat-icon>north_east</mat-icon>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- 1. Nickname Column -->
+          <ng-container matColumnDef="nickname">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Nickname </th>
+            <td mat-cell *matCellDef="let element">
+              <div class="user-nickname-wrapper">
+                <div class="user-avatar">
+                  {{ element.nickname.substring(0, 2).toUpperCase() }}
+                </div>
+                <span class="user-handle">{{ element.nickname }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- 2. IP Address Column -->
+          <ng-container matColumnDef="ip">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> IP Address </th>
+            <td mat-cell *matCellDef="let element">
+              <span class="ip-chip" (click)="copyIp(element.ip)" title="Click to copy IP">
+                {{ element.ip }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- 3. Client Operating System Column -->
+          <ng-container matColumnDef="os">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Operating System </th>
+            <td mat-cell *matCellDef="let element">
+              <span class="os-badge">{{ element.os }}</span>
+            </td>
+          </ng-container>
+
+          <!-- 4. Online Status Column -->
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Online Status </th>
+            <td mat-cell *matCellDef="let element">
+              <span *ngIf="element.status === 'Online'" class="status-badge status-online">
+                {{ element.port }}
+              </span>
+              <span *ngIf="element.status === 'Idle'" class="status-badge status-idle">
+                Idle
+              </span>
+              <span *ngIf="element.status === 'Offline'" class="status-badge status-offline">
+                Offline
+              </span>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-row"></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td class="no-data-cell" colspan="5">
+              No client match for "{{ input.value }}"
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons></mat-paginator>
+    </div>
+
+  </div>
+</div>

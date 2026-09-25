@@ -1,0 +1,195 @@
+/* Layout & Page Containers */
+.dashboard-container {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.dashboard-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Header Component */
+.dashboard-header {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.header-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0.25rem 0 0 0;
+}
+
+/* Filter Section */
+.filter-card {
+  background-color: #ffffff;
+  padding: 1rem 1.5rem 0 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.search-field {
+  width: 100%;
+}
+
+/* Table Card & Horizontal Scroll for Mobile */
+.table-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.table-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-row:hover {
+  background-color: #f1f5f9;
+  transition: background-color 0.2s ease;
+}
+
+/* Action Icon */
+.action-cell {
+  width: 48px;
+  text-align: center;
+}
+
+.icon-square {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.icon-square mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+/* Nickname styling (Reddit/Discord avatar feel) */
+.user-nickname-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #e0e7ff;
+  color: #4338ca;
+  font-weight: 700;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-handle {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* IP Chip */
+.ip-chip {
+  font-family: monospace;
+  font-size: 0.875rem;
+  background-color: #f1f5f9;
+  color: #334155;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ip-chip:hover {
+  background-color: #e2e8f0;
+}
+
+/* OS Badge */
+.os-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: #f8fafc;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+}
+
+/* Status Badges (Matches green pill style in photo) */
+.status-badge {
+  display: inline-block;
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+}
+
+.status-online {
+  background-color: #22c55e;
+  color: #ffffff;
+}
+
+.status-idle {
+  background-color: #f59e0b;
+  color: #ffffff;
+}
+
+.status-offline {
+  background-color: #94a3b8;
+  color: #ffffff;
+}
+
+.no-data-cell {
+  text-align: center;
+  padding: 2rem;
+  color: #94a3b8;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 640px) {
+  .dashboard-container {
+    padding: 0.75rem;
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
